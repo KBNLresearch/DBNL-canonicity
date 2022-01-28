@@ -1,0 +1,99 @@
+<!doctype html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>
+		The Canonizer
+	</title>
+	<link href="https://cdn.jsdelivr.net/npm/tom-select@2.0.0/dist/css/tom-select.css" rel="stylesheet">
+	<script src="https://cdn.jsdelivr.net/npm/tom-select@2.0.0/dist/js/tom-select.complete.min.js"></script>
+</head>
+<body style="font-family: arial">
+<div style="width: 700px; padding: 1%; align:center; background-color: #e3e6e5; ">
+	<h1 style="text-align: center;">The Canonizer</h1>
+
+	<p style="text-align: justify; ">
+	This tool takes the text of a novel and classifies it as either canonical
+	or non-canonical based on its word frequencies, using machine learning.
+	For the purposes of this tool, a novel is considered
+	<a href="https://nl.wikipedia.org/wiki/Literaire_canon">canonical</a>
+	when <a href="https://dbnl.org/">DBNL</a> (a digital archive of Dutch
+	literature) has one or more secondary references to it (i.e., a reviewer or
+	literary scholar discusses the novel in a secondary text that is part of
+	DBNL).
+	The system has been trained on a corpus of 1346 novels from 1800-2000
+	available in DBNL and is able to distinguish canonical and non-canonical texts
+	with a crossvalidated accuracy score of 72%.
+	Results may be substantially less reliable or meaningful for texts from
+	different genres and periods.
+	This tool serves to explore the learned association between textual
+	features and canonicity and is therefore intended purely for academic
+	purposes. In particular, distant reading, as performed by this tool,
+	is no substitute for actual reading!
+	</p>
+
+	<form name=form1 action=results method=get>
+		<div style="padding: 5; align: center;">
+			<p><label for="id">Choose a DBNL title</label></p>
+			<select name="id" id="select-book" style="width: 600px; " autocomplete="off">
+				<option value="" selected disabled hidden>...</option>
+				{% for ti_id, author_title in titles %}
+				<option value={{ ti_id }}>{{ author_title }}</option>
+				{%- endfor %}
+			</select>
+			<p style="margin-top: 1cm; text-align: center">
+				<img name="boekpijl" src="static/boekpijl.svg" alt="arrow" width="15%"/>
+			</p>
+
+			<p style="text-align: center">
+				<input type=submit value="Canonize this">
+			</p>
+		</div>
+	</form>
+	<script>
+		// turn plain drop down menu into searchable drop down menu
+		new TomSelect("#select-book",{
+			create: false,  // user cannot add their own items
+			maxOptions: 5000  // show all options
+		});
+	</script>
+	<div style="align: center; margin-top: 1cm; margin-bottom: 1cm; ">
+		<p align="center"> OR </p>
+	</div>
+
+	<form name=form2 action=classify method=post enctype="multipart/form-data">
+		<div style="padding: 5; align: center;">
+			<p>Enter (Dutch) text</p>
+			<textarea name=text rows=12 id=text style="width: 600px; "></textarea>
+
+			<p style="margin-top: 1cm; text-align: center">
+				<img name="boekpijl" src="static/boekpijl.svg" alt="arrow" width="15%"/>
+			</p>
+
+			<p style="text-align: center">
+				<input type=submit value="Canonize that">
+			</p>
+		</div>
+	</form>
+
+	
+	<div style="align: center; margin-top: 1cm; margin-bottom: 1cm; ">
+		<p align="center"> OR </p>
+	</div>
+
+	<form name=form3 action=plot method=get>
+		<div style="padding: 5; align: center;">
+			<p>Enter one or two words: (e.g., <a href="plot?feature=telefoon">telefoon</a>, or <a href="plot?feature=zegt hij">zegt hij</a>)</p>
+			<input type=text name=feature rows=12 id=text style="width: 600px; ">
+
+			<p style="margin-top: 1cm; text-align: center">
+				<img name="boekpijl" src="static/boekpijl.svg" alt="arrow" width="15%"/>
+			</p>
+
+			<p style="text-align: center">
+				<input type=submit value="Plot frequencies">
+			</p>
+		</div>
+	</form>
+
+</div></body></html>

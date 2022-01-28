@@ -1,0 +1,82 @@
+<!doctype html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>
+        The Canonizer
+    </title>
+</head>
+<body style="font-family: arial">
+
+<div style="margin-left: auto; margin-right: auto; width: 80%; align:center;background-color: #e3e6e5; padding: 20px; ">
+    <h1 style="text-align:center;">
+		The Canonizer
+	</h1>
+
+	<div style="padding: 5; ">
+	<form name=form3 action=plot method=get>
+		<p>
+			Enter one or two words:
+			<input type=text name=feature rows=12 id=text style="width: 400px; " value="{{ feature }}">
+			Smoothing:
+			<select name=smoothing>
+				<option value=0 {{ 'selected' if smoothing == 0 else '' }}>No</option>
+				{% for years in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 30, 40, 50] %}
+				<option value={{ years }} {{ 'selected' if smoothing == years else '' }} >{{ years }} years</option>
+				{% endfor %}
+			</select>
+			<input type=submit value="Plot frequencies">
+		</p>
+	</form>
+
+	<p style="text-align: justify; width: 960px; ">
+	The following results show the frequency of your query
+	across a corpus of Dutch novels, broken down by year and whether
+	the novel is canonical or non-canonical. Each datapoint shows the average
+	frequency of your query for that year (or a range of years if smoothing is enabled).
+	Note that ngrams are matched case insensitively and include punctuation.
+	You can also run your query on a large corpus of newspaper articles:
+	<a href="https://kbresearch.nl/ngramviewer/#q/{{ feature }}">Delpher n-grams</a>.
+	</p>
+	</div>
+
+    <div style="display:flex">
+		<img src="data:image/svg+xml;base64,{{ lineplot }}"/>
+    </div>
+
+    <div style="display:flex">
+		<p><a href="data:text/csv;charset=UTF-8;base64,{{ csvfile }}" download="canonizer results for {{ feature }}.csv">Download as CSV</a></p>
+    </div>
+
+	<div><pre>
+    <table style="border-collapse: separate; border-spacing: 10px; text-align: left;">
+        <thead>
+            <tr>
+                <th scope="col">DBNL link</th>
+                <th scope="col">Author </th>
+                <th scope="col" title="Title of novel (click to classify this novel)">Title </th>
+                <th scope="col" title="Year of first publication">First published </th>
+                <th scope="col" title="Number of secondary references in DBNL to this title">#Sec.refs</th>
+                <th scope="col" title="Absolute count of query">Count</th>
+                <th scope="col" title="Relative frequency of query (count normalized by text length)">Frequency (%)</th>
+
+            </tr>
+        </thead>
+        <tbody>
+        {% for row in top10.itertuples() %}
+        <tr>
+            <td><a href="https://dbnl.org/titels/titel.php?id={{ row['Index'] }}">{{ row['Index'] }}</a></td>
+            <td>{{ row['Author'] }}</td>
+            <td style="max-width: 300px; overflow: hidden;text-overflow: ellipsis; white-space: nowrap;"><a href="results?id={{ row['Index'] }}">{{ row['Title'] }}</a></td>
+            <td>{{ "%15d"|format(row['YearFirstPublished']) }}</td>
+			<td>{{ "%9d"|format(row['DBNLSecRefsTitle']) }}</td>
+            <td>{{ "%5d"|format(row['count']) }}</td>
+            <td>{{ "%13.4f"|format(row['freq']) }}</td>
+        </tr>
+        {%- endfor %}
+        </tbody>
+    </table>
+	</pre></div>
+
+</div>
+</body></html>

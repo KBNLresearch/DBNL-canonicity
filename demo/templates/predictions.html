@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>
+        The Canonizer
+    </title>
+	<script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-2.4.1.min.js"></script>
+	{{ script|safe }}
+</head>
+<body style="font-family: arial">
+
+<div style="margin-left: auto; margin-right: auto; width: 80%; align:center;background-color: #e3e6e5; padding: 20px; ">
+    <h1 style="text-align:center;">The Canonizer</h1>
+
+    <div style="display:flex">
+        <div id="input-rep" style="flex:2;margin:5px;">
+			{% if ti_id %}
+				<p><a href="https://www.dbnl.org/titels/titel.php?id={{ ti_id }}">
+				{{sim.loc[ti_id,'Title']}} ({{sim.loc[ti_id,'YearFirstPublished']}})</a></p>
+
+				<p> door {{sim.loc[ti_id,'Author']}} </p>
+			{% else %}
+				<p>Using text entered by user</p>
+			{% endif %}
+        </div>
+        <div style="flex:2;margin:5px;">
+			<p>Prediction: this text is {{ 'non-canonical' if pred == 0 else 'canonical'}}.</p>
+
+			<p>Confidence: {{ "%.1f"|format(100 * score) }} %.</p>
+        </div>
+        <div style="flex:4;margin:5px;">
+            <img src="data:image/svg+xml;base64, {{ histplot }}" title="A breakdown of features used for the classification; the x-axis shows bins of feature contributions (model weight * log freq), and the y-axis shows the total feature contribution for each bin."/>
+        </div>
+    </div>
+    <div style="display:flex">
+		<p style="flex:1; background-color:#9cdbd9; padding: 20px; margin:10px;">
+			important features (non-canonical):<br>
+			{%- for row in featlow.itertuples() %}
+			{%- if row['Index'] == '<BIAS>' %}
+			<span title="count: {{ '%d'|format(row['count']) }}; weight: {{ '%7.3f'|format(row['weight']) }}">{{ row['Index'] }}</span>
+			{%- else %}
+			<a href="plot?feature={{ row['Index'] }}" title="count: {{ '%d'|format(row['count']) }}; weight: {{ '%7.3f'|format(row['weight']) }}">{{ row['Index'] }}</a> &nbsp; 
+			{%- endif %}
+			{%- endfor %}
+		</p>
+		<p style="flex:1; background-color:#9cdbd9; padding: 20px; margin:10px;">
+			important features (canonical):<br>
+			{%- for row in feathigh.itertuples() %}
+			<a href="plot?feature={{ row['Index'] }}" title="count: {{ '%d'|format(row['count']) }}; weight: {{ '%7.3f'|format(row['weight']) }}">{{ row['Index'] }}</a> &nbsp; 
+			{%- endfor %}
+		</p>
+    </div>
+    <p>Most similar books:</p>
+    <pre>
+    <table style="border-collapse: separate; border-spacing: 10px; text-align: left;">
+        <thead>
+            <tr>
+                <th scope="col">DBNL link</th>
+                <th scope="col">Author </th>
+                <th scope="col" title="Title of novel (click to classify this novel)">Title </th>
+                <th scope="col" title="Year of first publication">First published </th>
+                <th scope="col" title="Number of secondary references in DBNL to this title">#Sec.refs</th>
+                <th scope="col" title="Cosine similarity of bigram vectors">Similarity</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for row in sim.itertuples() %}
+        <tr>
+            <td><a href="https://dbnl.org/titels/titel.php?id={{ row['Index'] }}">{{ row['Index'] }}</a></td>
+            <td>{{ row['Author'] }}</td>
+            <td style="max-width: 300px; overflow: hidden;text-overflow: ellipsis; white-space: nowrap;">
+			<a href="results?id={{ row['Index'] }}">{{ row['Title'] }}</a>
+			</td>
+            <td>{{ "%15d"|format(row['YearFirstPublished']) }}</td>
+			<td>{{ "%9d"|format(row['DBNLSecRefsTitle']) }}</td>
+            <td>{{ "%10.3f"|format(row['similarity']) }}</td>
+        </tr>
+        {%- endfor %}
+        </tbody>
+    </table>
+    </pre>
+	<div class='bokeh'>
+		{{ div|safe }}
+	</div>
+</div>
+</body></html>
