@@ -19,7 +19,7 @@ from bokeh.models import HoverTool
 from bokeh.transform import factor_cmap, factor_mark
 from bokeh.embed import components
 from sklearn import feature_extraction
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics.pairwise import linear_kernel
 import joblib
 import nltk
 from marisa_trie import RecordTrie
@@ -97,13 +97,13 @@ def plot():
 			return pd.DataFrame({
 					'feat': BIGRAMS[:, BIGRAMTRIE[feature][0][0]
 						].toarray()[:, 0],
-					'tot': BIGRAMS.sum(axis=1).A1},
+					'tot': BIGRAMSSUM},
 					index=MD.index)
 		elif feature in UNIGRAMTRIE:
 			return pd.DataFrame({
 					'feat': UNIGRAMS[:, UNIGRAMTRIE[feature][0][0]
 						].toarray()[:, 0],
-					'tot': UNIGRAMS.sum(axis=1).A1},
+					'tot': UNIGRAMSSUM},
 					index=MD.index)
 
 	if 'feature' not in request.args:
@@ -181,12 +181,12 @@ def getpredictions(feat, selected_ti_id):
 	featlow = features[features['comb'] < 0].nsmallest(100, 'comb').round(3)
 	feathigh = features[features['comb'] > 0].nlargest(100, 'comb').round(3)
 
+	# can use linear kernel for cosine similarity due to l2 normalization
 	sim = pd.Series(
-			cosine_similarity(
+			linear_kernel(
 				BIGRAMSNORMALIZED, MODEL[0].transform(feat))[:, 0],
-			index=MD.index)
-	sim = MD.merge(sim.rename('similarity'), left_index=True, right_index=True
-			).nlargest(10, 'similarity')
+			index=MD.index, name='similarity').nlargest(10)
+	sim = pd.concat([MD.loc[sim.index, :], sim], axis=1)
 
 	histplot = makehistplot(features, MODEL[1].intercept_[0])
 	script, div = scatterplot(selected_ti_id, feat, sim)
@@ -349,6 +349,8 @@ if STANDALONE:
 MD = pd.read_csv('data/metadata.tsv', sep='\t', index_col='DBNLti_id')
 UNIGRAMS = scipy.sparse.load_npz('data/unigram_counts.npz')
 BIGRAMS = scipy.sparse.load_npz('data/bigram_counts.npz')
+UNIGRAMSSUM = UNIGRAMS.sum(axis=1).A1
+BIGRAMSSUM = BIGRAMS.sum(axis=1).A1
 # Up to 100k ngrams, used for training classifier
 ROWNAMES, _UNIGRAMCOLUMNS, BIGRAMCOLUMNS = joblib.load('data/ngrams_idx_col.pkl')
 ROWNAMES = pd.Index(ROWNAMES)
@@ -394,6 +396,9 @@ PCARED = pd.concat([PCARED, MD], axis=1)
 log.info('read pca.pkl & tsne.pqt.')
 log.info('done.')
 if STANDALONE:
+	# from werkzeug.middleware.profiler import ProfilerMiddleware
+	# APP.wsgi_app = ProfilerMiddleware(
+	# 		APP.wsgi_app, restrictions=(10, ), sort_by=('time', ))
 	APP.run(
 			host=opts.get('--ip', '0.0.0.0'),
 			port=int(opts.get('--port', 5004)),
