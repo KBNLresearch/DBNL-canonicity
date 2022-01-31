@@ -16,4 +16,4 @@ Run:
 Run with Docker, automatically restarts at reboot:
 
 	$ docker build --tag canonizer .
-	$ docker run --deatch --publish 5004:5004 --restart always canonizer
+	$ docker run --detach --publish 5004:5004 --restart always canonizer
