@@ -4,7 +4,7 @@ Installation:
 
 	$ git clone https://github.com/KBNLresearch/DBNL-canonicity.git
 	$ cd DBNL-canonicity/demo
-	$ wget https://urd2.let.rug.nl/~andreas/canonizer/data.zip
+	$ wget https://github.com/KBNLresearch/DBNL-canonicity/releases/download/v1.0/data.zip
 	$ unzip data.zip
     $ rm data.zip
 
@@ -15,5 +15,5 @@ Run:
 
 Run with Docker, automatically restarts at reboot:
 
-	$ docker build -t canonizer .
-	$ docker run -p 5004:5004 --restart always canonizer
+	$ docker build --tag canonizer .
+	$ docker run --deatch --publish 5004:5004 --restart always canonizer
