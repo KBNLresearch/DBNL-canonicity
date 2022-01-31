@@ -130,7 +130,7 @@ def plot():
 			# 'all': freqs.groupby(MD.YearFirstPublished).mean(),
 			'Canonical': 100 * c['feat'] / c['tot'],
 			'Non-canonical': 100 * nc['feat'] / nc['tot'],
-			}, axis=1)
+			}, axis=1, sort=True)
 	fig, ax = plt.subplots(figsize=(10, 5))
 	ax.set_xlabel('Year')
 	ax.set_ylabel('Frequency (%)')
