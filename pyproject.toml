@@ -1,0 +1,127 @@
+
+[tool]
+
+	[tool.coverage]
+
+		[tool.coverage.report]
+		exclude_lines = ["nocover"]
+		ignore_errors = false
+		precision = 1
+		show_missing = true
+
+		[tool.coverage.run]
+		branch = true
+		omit = ["test_*","setup.py"]
+		source = ["."]
+
+	[tool.pytest]
+
+		[tool.pytest.ini_options]
+		minversion = "6.0"
+		doctest_optionflags = [
+			"ELLIPSIS",
+			"NORMALIZE_WHITESPACE",
+		]
+		addopts = "--doctest-modules --exitfirst --failed-first --durations=5"
+		# treat warnings as errors
+		filterwarnings = ["error"]
+
+
+
+	[tool.pylint]
+
+		[tool.pylint.master]
+			# Pickle collected data for later comparisons.
+			persistent = "yes"
+			ignore = ""
+			load-plugins = ""
+			profile = "no"
+
+		[tool.pylint.message_control]
+			disable = "R,bad-continuation,no-else-return,no-else-raise,fixme,no-member"
+			# R = refactor messages
+			# C0302 == Too many lines in module
+			# C0103 == Invalid name
+			# W0142 == Used * or ** magic
+            # W0511 == FIXME etc.
+            # E1101: Instance of '...' has no '...' member (no-member)
+
+		[tool.pylint.reports]
+			output-format = "colorized"
+			reports = "yes"
+			evaluation = "10.0 - ((float(5 * error + warning + refactor + convention) / statement) * 10)"
+			# comment = "no"
+			# files-output = "no"
+
+		[tool.pylint.basic]
+			bad-functions = "input"
+			module-rgx = "(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$"
+			const-rgx = "(([A-Z_][A-Z0-9_]*)|(__.*__))$|^urls$|^app$|^User$|^router$"
+			class-rgx = "[A-Z_][a-zA-Z0-9]+$"
+			function-rgx = "[A-Za-z_][A-Za-z0-9_]{2,40}$"
+			method-rgx = "[A-Za-z_][A-Za-z0-9_]{2,50}$"
+			attr-rgx = "[a-z_][a-z0-9_]{2,30}$"
+			argument-rgx = "[a-z_][a-z0-9_]{2,30}$"
+			variable-rgx = "[a-z_][a-z0-9_]{2,30}$|^pk$"
+			inlinevar-rgx = "[A-Za-z_][A-Za-z0-9_]*$"
+			good-names = "a,b,c,i,j,k,m,n,w,x,y,ax,ex,op,df,Run,_"
+			bad-names = "foo,bar,baz,toto,tutu,tata"
+			no-docstring-rgx = "__.*__|test_.*"
+			class-attribute-rgx = "([A-Za-z_][A-Za-z0-9_]{2,30}|(__.*__))$"
+			# docstring-min-length = "-1"
+			# required-attributes = []
+
+		[tool.pylint.similarities]
+			min-similarity-lines = 4
+			ignore-comments = "yes"
+			ignore-docstrings = "yes"
+			ignore-imports = "yes"
+
+		[tool.pylint.typecheck]
+			ignore-mixin-members = "yes"
+			ignored-classes = "SQLObject"
+			generated-members = "REQUEST,acl_users,aq_parent"
+			zope = "no"
+
+		[tool.pylint.miscellaneous]
+			notes = "FIXME,XXX,TODO"
+
+		[tool.pylint.format]
+			max-line-length = 80
+			max-module-lines = 1000
+			indent-string = "\t"
+			single-line-if-stmt = "yes"
+			# ignore-long-lines = "^\\s*(# )?<?https?://\\S+>?$"
+			# no-space-check = "trailing-comma,dict-separator"
+
+		[tool.pylint.variables]
+			init-import = "no"
+			dummy-variables-rgx = "_|unused_"
+			additional-builtins = ""
+
+		[tool.pylint.imports]
+			# NB: don't include string, since string.alphabet is useful
+			deprecated-modules = "regsub,TERMIOS,Bastion,rexec"
+			import-graph = ""
+			ext-import-graph = ""
+			int-import-graph = ""
+
+		[tool.pylint.classes]
+			defining-attr-methods = "__init__,__new__"
+			valid-classmethod-first-arg = "cls"
+			valid-metaclass-classmethod-first-arg = "mcs"
+
+		[tool.pylint.design]
+			max-args = 5
+			ignored-argument-names = "_.*"
+			max-locals = 15
+			max-returns = 6
+			max-branches = 12
+			max-statements = 50
+			max-parents = 7
+			max-attributes = 7
+			min-public-methods = 2
+			max-public-methods = 20
+
+		[tool.pylint.exceptions]
+			overgeneral-exceptions = "Exception"

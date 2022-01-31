@@ -5,13 +5,13 @@
     <title>
         The Canonizer
     </title>
-	<script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-2.4.1.min.js"></script>
+	<script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-2.4.1.min.js" crossorigin="anonymous"></script>
 	{{ script|safe }}
 </head>
 <body style="font-family: arial">
 
 <div style="margin-left: auto; margin-right: auto; width: 80%; align:center;background-color: #e3e6e5; padding: 20px; ">
-    <h1 style="text-align:center;">The Canonizer</h1>
+	<h1 style="text-align: center; "><a href="index" style="text-decoration: none; color: black; ">The Canonizer</a></h1>
 
     <div style="display:flex">
         <div id="input-rep" style="flex:2;margin:5px;">
@@ -30,24 +30,24 @@
 			<p>Confidence: {{ "%.1f"|format(100 * score) }} %.</p>
         </div>
         <div style="flex:4;margin:5px;">
-            <img src="data:image/svg+xml;base64, {{ histplot }}" title="A breakdown of features used for the classification; the x-axis shows bins of feature contributions (model weight * log freq), and the y-axis shows the total feature contribution for each bin."/>
+            <img src="data:image/svg+xml;base64, {{ histplot }}" title="A breakdown of features used for the classification. The x-axis shows bins of feature counts in this text on a logarithmic scale. The y-axis shows the total feature contribution (model weight * frequency) for each bin. When the surface area of positive contributions is larger than the negative contributions, the text is classified as canonical."/>
         </div>
     </div>
     <div style="display:flex">
 		<p style="flex:1; background-color:#9cdbd9; padding: 20px; margin:10px;">
-			important features (non-canonical):<br>
+			<span title="Features in this text with a frequency that is negatively correlated with canonicity">negative features:</span><br>
 			{%- for row in featlow.itertuples() %}
-			{%- if row['Index'] == '<BIAS>' %}
+			{%- if row['Index'] == '<INTERCEPT>' %}
 			<span title="count: {{ '%d'|format(row['count']) }}; weight: {{ '%7.3f'|format(row['weight']) }}">{{ row['Index'] }}</span>
 			{%- else %}
-			<a href="plot?feature={{ row['Index'] }}" title="count: {{ '%d'|format(row['count']) }}; weight: {{ '%7.3f'|format(row['weight']) }}">{{ row['Index'] }}</a> &nbsp; 
+			<a href="plot?feature={{ row['Index'] }}" title="count: {{ '%d'|format(row['count']) }}; weight: {{ '%7.3f'|format(row['weight']) }}" style="text-decoration: none; ">{{ row['Index'] }}</a> &nbsp; 
 			{%- endif %}
 			{%- endfor %}
 		</p>
 		<p style="flex:1; background-color:#9cdbd9; padding: 20px; margin:10px;">
-			important features (canonical):<br>
+			<span title="Features in this text with a frequency that is positively correlated with canonicity">positive features:</span><br>
 			{%- for row in feathigh.itertuples() %}
-			<a href="plot?feature={{ row['Index'] }}" title="count: {{ '%d'|format(row['count']) }}; weight: {{ '%7.3f'|format(row['weight']) }}">{{ row['Index'] }}</a> &nbsp; 
+			<a href="plot?feature={{ row['Index'] }}" title="count: {{ '%d'|format(row['count']) }}; weight: {{ '%7.3f'|format(row['weight']) }}" style="text-decoration: none; ">{{ row['Index'] }}</a> &nbsp; 
 			{%- endfor %}
 		</p>
     </div>
@@ -70,7 +70,7 @@
             <td><a href="https://dbnl.org/titels/titel.php?id={{ row['Index'] }}">{{ row['Index'] }}</a></td>
             <td>{{ row['Author'] }}</td>
             <td style="max-width: 300px; overflow: hidden;text-overflow: ellipsis; white-space: nowrap;">
-			<a href="results?id={{ row['Index'] }}">{{ row['Title'] }}</a>
+			<a href="results?id={{ row['Index'] }}" title="{{ row['Title'] }}">{{ row['Title'] }}</a>
 			</td>
             <td>{{ "%15d"|format(row['YearFirstPublished']) }}</td>
 			<td>{{ "%9d"|format(row['DBNLSecRefsTitle']) }}</td>

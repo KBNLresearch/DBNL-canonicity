@@ -9,9 +9,7 @@
 <body style="font-family: arial">
 
 <div style="margin-left: auto; margin-right: auto; width: 80%; align:center;background-color: #e3e6e5; padding: 20px; ">
-    <h1 style="text-align:center;">
-		The Canonizer
-	</h1>
+	<h1 style="text-align: center; "><a href="index" style="text-decoration: none; color: black; ">The Canonizer</a></h1>
 
 	<div style="padding: 5; ">
 	<form name=form3 action=plot method=get>
@@ -67,7 +65,8 @@
         <tr>
             <td><a href="https://dbnl.org/titels/titel.php?id={{ row['Index'] }}">{{ row['Index'] }}</a></td>
             <td>{{ row['Author'] }}</td>
-            <td style="max-width: 300px; overflow: hidden;text-overflow: ellipsis; white-space: nowrap;"><a href="results?id={{ row['Index'] }}">{{ row['Title'] }}</a></td>
+            <td style="max-width: 300px; overflow: hidden;text-overflow: ellipsis; white-space: nowrap;">
+			<a href="results?id={{ row['Index'] }}" title="{{ row['Title'] }}">{{ row['Title'] }}</a></td>
             <td>{{ "%15d"|format(row['YearFirstPublished']) }}</td>
 			<td>{{ "%9d"|format(row['DBNLSecRefsTitle']) }}</td>
             <td>{{ "%5d"|format(row['count']) }}</td>

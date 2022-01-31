@@ -3,15 +3,17 @@
 from __future__ import print_function, absolute_import
 import io
 import sys
-from base64 import b64encode
 import logging
+from base64 import b64encode
 # data science
 import matplotlib
 matplotlib.use('SVG')
+import numpy as np
 import scipy.sparse
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from matplotlib.ticker import ScalarFormatter
 import bokeh.plotting as bp
 from bokeh.models import HoverTool
 from bokeh.transform import factor_cmap, factor_mark
@@ -20,6 +22,7 @@ from sklearn import feature_extraction
 from sklearn.metrics.pairwise import cosine_similarity
 import joblib
 import nltk
+from marisa_trie import RecordTrie
 # Flask & co
 from flask import (Flask, make_response, request, render_template,
 		send_from_directory)
@@ -62,11 +65,10 @@ def results():
 	if 'id' in request.args:
 		ti_id = request.args['id']
 		i = ROWNAMES.get_loc(ti_id)
-		feat = BIGRAMS[i:i + 1, :].toarray()
+		feat = BIGRAMS[i:i + 1, :BIGRAMLIMIT].toarray()
 	else:
-		return 'no id parameter'
+		return 'Pick a title from the drop down menu.'
 	result = getpredictions(feat, ti_id)
-	result['ti_id'] = ti_id
 	resp = make_response(render_template('predictions.html', **result))
 	resp.cache_control.max_age = 604800
 	return resp
@@ -81,9 +83,8 @@ def classify():
 		tokens = tokenize(text.lower())
 		feat = extractfeatures(tokens)
 	else:
-		return 'No form'
+		return 'No text entered.'
 	result = getpredictions(feat, ti_id)
-	result['ti_id'] = ti_id
 	return render_template('predictions.html', **result)
 
 
@@ -92,15 +93,15 @@ def classify():
 def plot():
 	"""Show average frequency over time of a given feature."""
 	def fetch(feature):
-		if feature in BIGRAMCOLUMNS:
+		if feature in BIGRAMTRIE:
 			return pd.DataFrame({
-					'feat': BIGRAMS[:, BIGRAMCOLUMNS.get_loc(feature)
+					'feat': BIGRAMS[:, BIGRAMTRIE[feature][0][0]
 						].toarray()[:, 0],
 					'tot': BIGRAMS.sum(axis=1).A1},
 					index=MD.index)
-		elif feature in UNIGRAMCOLUMNS:
+		elif feature in UNIGRAMTRIE:
 			return pd.DataFrame({
-					'feat': UNIGRAMS[:, UNIGRAMCOLUMNS.get_loc(feature)
+					'feat': UNIGRAMS[:, UNIGRAMTRIE[feature][0][0]
 						].toarray()[:, 0],
 					'tot': UNIGRAMS.sum(axis=1).A1},
 					index=MD.index)
@@ -109,14 +110,14 @@ def plot():
 		return 'feature is required'
 	feature = request.args['feature'].lower()
 	try:
-		smoothing = int(request.args.get('smoothing', 3))
+		smoothing = int(request.args.get('smoothing', 5))
 	except ValueError:
-		smoothing = 3
+		smoothing = 5
 	df = fetch(feature)
 	if df is None:
 		df = fetch(tokenize(feature))
 	if df is None:
-		return ('%r is not part of the 100k most frequent unigrams/bigrams. '
+		return ('%r is not in the corpus.'
 				% feature)
 	df['freq'] = (df.feat / df.tot * 100)
 	top10 = MD.merge(
@@ -174,7 +175,8 @@ def getpredictions(feat, selected_ti_id):
 				'weight': MODEL[1].coef_[0],  # * BIGRAMS.std(axis=0),
 				'comb': freq * MODEL[1].coef_[0]},
 			index=BIGRAMCOLUMNS)
-	# features.loc['<BIAS>'] = [1, MODEL[1].intercept_[0], MODEL[1].intercept_[0]]
+	# features.loc['<INTERCEPT>'] = [
+	# 		1, MODEL[1].intercept_[0], MODEL[1].intercept_[0]]
 	features = features[features['count'] > 0]
 	featlow = features[features['comb'] < 0].nsmallest(100, 'comb').round(3)
 	feathigh = features[features['comb'] > 0].nlargest(100, 'comb').round(3)
@@ -186,17 +188,57 @@ def getpredictions(feat, selected_ti_id):
 	sim = MD.merge(sim.rename('similarity'), left_index=True, right_index=True
 			).nlargest(10, 'similarity')
 
-	histplot = makehistplot(features)
-	script, div = pcaplot(selected_ti_id, feat, sim)
+	histplot = makehistplot(features, MODEL[1].intercept_[0])
+	script, div = scatterplot(selected_ti_id, feat, sim)
 
 	return dict(score=score, pred=int(pred),
 			featlow=featlow, feathigh=feathigh,
 			sim=sim, histplot=histplot,
-			script=script, div=div)
+			script=script, div=div, ti_id=selected_ti_id)
 
 
-def makehistplot(features):
-	"""Create histogram of feature contributions."""
+def makehistplot(features, intercept):
+	"""Create histogram of feature contributions
+
+	x-axis: count (logarithmic), y-axis: contribution (freq * weight)."""
+	# This is not a proper histogram, because the y-axis does not show
+	# counts, but the sum of the actual feature contributions.
+	# A count histogram is misleading in this case because a large number of
+	# features with a very small positive contribution would give the
+	# impression that the predicted label should be positive as well.
+	fig, ax = plt.subplots(figsize=(5, 2))
+	pos = features.loc[features['comb'] > 0, :]
+	neg = features.loc[features['comb'] < 0, :]
+	neg['comb'] += intercept / len(neg)  # account for intercept
+	totalpos = features.loc[features['comb'] > 0, 'comb'].sum()
+	totalneg = features.loc[features['comb'] < 0, 'comb'].sum() + MODEL[1
+			].intercept_[0]
+	# Logarithmic histogram https://stackoverflow.com/a/54529366
+	hist, bins = np.histogram(features['count'], bins=20)
+	logbins = np.logspace(np.log10(bins[0]), np.log10(bins[-1]), len(bins))
+	ax.hist(pos['count'], bins=logbins, weights=pos['comb'],
+			histtype='stepfilled', label='pos: %+.3f' % totalpos)
+	ax.hist(neg['count'], bins=logbins, weights=neg['comb'],
+			histtype='stepfilled', label='neg: %.3f' % totalneg)
+	ax.set_xscale('log')
+	ax.set_xlabel('Feature count')
+	ax.set_ylabel('Contribution')
+	a, b = ax.get_ylim()
+	ax.set_ylim((-max(abs(a), abs(b)), max(abs(a), abs(b))))
+	ax.legend(loc='best')
+	ax.xaxis.set_major_formatter(ScalarFormatter())
+	for item in [ax.title, ax.xaxis.label, ax.yaxis.label
+			] + ax.get_xticklabels() + ax.get_yticklabels():
+		item.set_fontsize(8)
+	result = b64fig(ax)
+	plt.close(fig)
+	return result
+
+
+def makehistplot_prev(features, intercept):
+	"""Create histogram of feature contributions.
+
+	x-axis: contribution, y-axis: contribution."""
 	# This is not a proper histogram, because the y-axis does not show
 	# counts, but the sum of the actual feature contributions.
 	# Don't know how to properly call this visualization ...
@@ -206,11 +248,14 @@ def makehistplot(features):
 	fig, ax = plt.subplots(figsize=(5, 2))
 	x = max(abs(features['comb'].min()), abs(features['comb'].max()))
 	rng = (-x, x)
-	ax.hist(features.loc[features['comb'] < 0, 'comb'],
-			bins=20, weights=features.loc[features['comb'] < 0, 'comb'].abs(),
+	neg = features.loc[features['comb'] < 0, 'comb'].sort_values()
+	negweight = neg.copy()
+	# add the intercept term to the smallest negative weight
+	negweight.iat[-1] += intercept
+	pos = features.loc[features['comb'] > 0, 'comb']
+	ax.hist(neg, bins=20, weights=negweight.abs(),
 			range=rng, histtype='stepfilled', label='non-canonical')
-	ax.hist(features.loc[features['comb'] > 0, 'comb'],
-			bins=20, weights=features.loc[features['comb'] > 0, 'comb'],
+	ax.hist(pos, bins=20, weights=pos,
 			range=rng, histtype='stepfilled', label='canonical')
 	ax.set_xlabel('Feature contribution (binned)')
 	ax.set_ylabel('Contribution ')
@@ -224,44 +269,51 @@ def makehistplot(features):
 	return result
 
 
-def pcaplot(selected_ti_id, feat, sim):
-	"""Create a Bokeh scatter plot with categorical/qualitative colors."""
+def scatterplot(selected_ti_id, feat, sim):
+	"""Create a Bokeh scatter plot with categorical/qualitative colors.
+
+	t-SNE if selected_ti_id is part of the corpus (better than PCA);
+	PCA if user provided text (since t-SNE in sklearn does not support adding
+	new datapoints)."""
 	# TODOs:
 	# - avoid sending all metadata for each PCA plot;
 	#   only the highlight column is different for each request,
 	#   and the row with user entered text.
 	# - 3D PCA plot; apparently not supported by Bokeh.
-	pcared = PCARED.loc[:, ['PC 1', 'PC 2', 'Author', 'Title',
-			'YearFirstPublished', 'DBNLgenre', 'DBNLsubgenre',
-			'Filename']].copy()
-	pcared['highlight'] = [ti_id if ti_id == selected_ti_id
-			else 'similar' if ti_id in sim.index else 'rest'
-			for ti_id in pcared.index]
+	cols = ['PC 1', 'PC 2', 'Author', 'Title', 'YearFirstPublished',
+			'DBNLgenre', 'DBNLsubgenre', 'Filename']
+	if selected_ti_id is None:
+		red = PCARED.loc[:, cols].copy()
+	else:
+		red = TSNERED.loc[:, cols].copy()
+	red['highlight'] = [ti_id if ti_id == selected_ti_id
+			else 'most similar' if ti_id in sim.index else 'rest'
+			for ti_id in red.index]
 	# some gymnastics to get the legend in the preferred order ...
-	pcared = pcared.sort_values(
+	red = red.sort_values(
 			by='highlight',
 			key=lambda x: (x != selected_ti_id) + 2 * (x == 'rest'))
 	if selected_ti_id is None:
-		res = dict.fromkeys(pcared.columns, '')
+		res = dict.fromkeys(red.columns, '')
 		res['PC 1'], res['PC 2'] = REDUCER.transform(
 				MODEL[0].transform(feat))[0, :]
-		res['highlight'] = 'your text'
-		res['Title'] = 'your text'
-		pcared = pcared.append(
-				pd.Series(res, index=pcared.columns, name='your text'))
+		res['highlight'] = res['Title'] = 'your text'
+		red = pd.DataFrame([res], index=['your text']).append(red)
 	plot = bp.figure(plot_width=900, plot_height=700,
-			title='PCA of bigram frequencies in DBNL corpus '
-				'(N=%d novels, log-transformed counts)'  % len(pcared),
+			title='%s of bigram frequencies in DBNL corpus '
+				'(N=%d novels, log-transformed frequencies)'  % (
+					'PCA' if selected_ti_id is None else 't-SNE',
+					len(red)),
 			tools='pan,wheel_zoom,box_zoom,reset,hover,save',
 			x_axis_type=None, y_axis_type=None, min_border=1)
 	plot.scatter(x='PC 1', y='PC 2', size=6,
 			color=factor_cmap('highlight',
 				palette=sns.color_palette('deep', as_cmap=True),
-				factors=pcared.highlight.unique()[::-1]),
+				factors=red.highlight.unique()[::-1]),
 			marker=factor_mark('highlight', ['square', 'triangle', 'circle'],
-				pcared.highlight.unique()),
+				red.highlight.unique()),
 			legend_field='highlight', fill_alpha=0.2, # line_color='white',
-			source=bp.ColumnDataSource(pcared))
+			source=bp.ColumnDataSource(red))
 	hover = plot.select(dict(type=HoverTool))
 	hover.tooltips={'label': '@Author @YearFirstPublished @Title | @DBNLgenre '
 			'@DBNLsubgenre @Filename'}
@@ -287,7 +339,7 @@ if STANDALONE:
 	from getopt import gnu_getopt, GetoptError
 	try:
 		opts, _args = gnu_getopt(sys.argv[1:], '',
-				['port=', 'ip=', 'numproc=', 'debug'])
+				['port=', 'ip=', 'debug'])
 		opts = dict(opts)
 	except GetoptError as err:
 		print('error: %r' % err, file=sys.stderr)
@@ -297,10 +349,21 @@ if STANDALONE:
 MD = pd.read_csv('data/metadata.tsv', sep='\t', index_col='DBNLti_id')
 UNIGRAMS = scipy.sparse.load_npz('data/unigram_counts.npz')
 BIGRAMS = scipy.sparse.load_npz('data/bigram_counts.npz')
-ROWNAMES, UNIGRAMCOLUMNS, BIGRAMCOLUMNS = joblib.load('data/ngrams_idx_col.pkl')
+# Up to 100k ngrams, used for training classifier
+ROWNAMES, _UNIGRAMCOLUMNS, BIGRAMCOLUMNS = joblib.load('data/ngrams_idx_col.pkl')
 ROWNAMES = pd.Index(ROWNAMES)
-UNIGRAMCOLUMNS = pd.Index(UNIGRAMCOLUMNS)
 BIGRAMCOLUMNS = pd.Index(BIGRAMCOLUMNS)
+# Create trie for full index of ngrams
+# ROWNAMES, UNIGRAMCOLUMNS, BIGRAMCOLUMNS = joblib.load('../output/ngrams_idx_col.pkl')
+# UNIGRAMTRIE = RecordTrie('<i', ((a, (n, )) for n, a in enumerate(UNIGRAMCOLUMNS)))
+# BIGRAMTRIE = RecordTrie('<i', ((a, (n, )) for n, a in enumerate(BIGRAMCOLUMNS)))
+# UNIGRAMTRIE.save('data/unigrams.marisa')
+# BIGRAMTRIE.save('data/bigrams.marisa')
+UNIGRAMTRIE, BIGRAMTRIE = RecordTrie('<i'), RecordTrie('<i')
+UNIGRAMTRIE.load('data/unigrams.marisa')
+BIGRAMTRIE.load('data/bigrams.marisa')
+# number of most frequent bigrams used by classifier
+BIGRAMLIMIT = len(BIGRAMCOLUMNS)
 log.info('read ngrams')
 
 MODEL = joblib.load('data/classifier.pkl')
@@ -308,20 +371,31 @@ log.info('read classifier.pkl.')
 VEC = feature_extraction.text.CountVectorizer(
 		input='content', ngram_range=(2, 2), token_pattern=r'\b\S+\b',
 		lowercase=True, vocabulary=BIGRAMCOLUMNS)
-BIGRAMSNORMALIZED = MODEL[0].transform(BIGRAMS)
+BIGRAMSNORMALIZED = MODEL[0].transform(BIGRAMS[:, :BIGRAMLIMIT])
 log.info('transformed bigrams')
-# from sklearn import decomposition
+# from sklearn import decomposition, manifold
 # REDUCER = decomposition.TruncatedSVD(n_components=2, random_state=1)
 # REDUCER.fit(BIGRAMSNORMALIZED)
 # joblib.dump(REDUCER, 'data/pca.pkl')
+# REDUCER1 = decomposition.TruncatedSVD(n_components=50, random_state=1)
+# REDUCER2 = manifold.TSNE(n_components=2, perplexity=30,
+# 		learning_rate=len(ROWNAMES) / 48, metric='cosine', random_state=0,
+# 		square_distances=True)
+# TSNERED = pd.DataFrame(
+# 		REDUCER2.fit_transform(REDUCER1.fit_transform(BIGRAMSNORMALIZED)),
+# 		index=MD.index, columns=['PC 1', 'PC 2'])
+# TSNERED.to_parquet('data/tsne.pqt')
+TSNERED = pd.read_parquet('data/tsne.pqt')
+TSNERED = pd.concat([TSNERED, MD], axis=1)
 REDUCER = joblib.load('data/pca.pkl')
 PCARED = pd.DataFrame(REDUCER.transform(BIGRAMSNORMALIZED),
 		index=MD.index, columns=['PC 1', 'PC 2'])
 PCARED = pd.concat([PCARED, MD], axis=1)
-log.info('read pca.pkl.')
+log.info('read pca.pkl & tsne.pqt.')
 log.info('done.')
 if STANDALONE:
-	APP.run(use_reloader=True,
+	APP.run(
 			host=opts.get('--ip', '0.0.0.0'),
 			port=int(opts.get('--port', 5004)),
+			use_reloader=False, threaded=True,
 			debug=DEBUG)
