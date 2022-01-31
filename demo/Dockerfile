@@ -4,6 +4,8 @@ MAINTAINER Andreas van Cranenburgh <a.w.van.cranenburgh@rug.nl>
 # https://snyk.io/blog/best-practices-containerizing-python-docker/
 COPY requirements.txt /
 RUN pip install -r /requirements.txt
+ENV HOME=/usr
+RUN python -c "import nltk; nltk.download('punkt')"
 
 RUN groupadd -g 999 user && \
     useradd -r -u 999 -g user user
