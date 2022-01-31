@@ -137,7 +137,6 @@ def plot():
 	smoothingdescr = ('(smoothing: %d)' % smoothing
 			) if smoothing else ''
 	ax.set_title('%r in DBNL novels %s' % (feature, smoothingdescr))
-	fig.tight_layout()
 	csvfile = b64encode(yearfreqs.to_csv(None).encode('utf8')).decode('ascii')
 	if smoothing:
 		yearfreqs = yearfreqs.interpolate().rolling(
@@ -323,7 +322,7 @@ def scatterplot(selected_ti_id, feat, sim):
 
 def b64fig(ax):
 	"""Return plot as base64 encoded SVG string for use in data URI."""
-	ax.figure.tight_layout()
+	# ax.figure.tight_layout()
 	figbytes = io.BytesIO()
 	ax.figure.savefig(figbytes, format='svg')
 	return b64encode(figbytes.getvalue()).decode('ascii')
