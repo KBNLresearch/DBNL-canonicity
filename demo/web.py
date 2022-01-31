@@ -229,6 +229,7 @@ def makehistplot(features, intercept):
 	for item in [ax.title, ax.xaxis.label, ax.yaxis.label
 			] + ax.get_xticklabels() + ax.get_yticklabels():
 		item.set_fontsize(8)
+	fig.subplots_adjust(bottom=0.2, top=0.95, right=0.95)
 	result = b64fig(ax)
 	plt.close(fig)
 	return result
