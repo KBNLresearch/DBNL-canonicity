@@ -131,18 +131,8 @@ def plot():
 			'Canonical': 100 * c['feat'] / c['tot'],
 			'Non-canonical': 100 * nc['feat'] / nc['tot'],
 			}, axis=1, sort=True)
-	fig, ax = plt.subplots(figsize=(10, 5))
-	ax.set_xlabel('Year')
-	ax.set_ylabel('Frequency (%)')
-	smoothingdescr = ('(smoothing: %d)' % smoothing
-			) if smoothing else ''
-	ax.set_title('%r in DBNL novels %s' % (feature, smoothingdescr))
 	csvfile = b64encode(yearfreqs.to_csv(None).encode('utf8')).decode('ascii')
-	if smoothing:
-		yearfreqs = yearfreqs.interpolate().rolling(
-				2 * smoothing + 1, center=True).mean()
-	lineplot = b64fig(yearfreqs.plot(ax=ax))
-	plt.close(fig)
+	lineplot = freqplot(yearfreqs, feature, smoothing)
 	resp = make_response(render_template(
 			'plot.html', lineplot=lineplot, top10=top10, smoothing=smoothing,
 			csvfile=csvfile, feature=feature))
@@ -196,6 +186,25 @@ def getpredictions(feat, selected_ti_id):
 			script=script, div=div, ti_id=selected_ti_id)
 
 
+def freqplot(yearfreqs, feature, smoothing):
+	"""Create a frequency plot for an n-gram `feature` by year."""
+	fig, ax = plt.subplots(figsize=(10, 5))
+	smoothingdescr = ''
+	if smoothing:
+		yearfreqs = yearfreqs.interpolate().rolling(
+				2 * smoothing + 1, center=True).mean()
+		smoothingdescr = ' (smoothing: %d)' % smoothing
+	yearfreqs.plot(ax=ax)
+	ax.set_title('%r in DBNL novels%s' % (feature, smoothingdescr))
+	ax.set_xlabel('Year')
+	ax.set_ylabel('Frequency (%)')
+	# adjust manually because fig.tight_layout() is slow
+	fig.subplots_adjust(top=0.92, right=0.97, left=0.08)
+	lineplot = b64fig(ax)
+	plt.close(fig)
+	return lineplot
+
+
 def makehistplot(features, intercept):
 	"""Create histogram of feature contributions
 
@@ -229,7 +238,8 @@ def makehistplot(features, intercept):
 	for item in [ax.title, ax.xaxis.label, ax.yaxis.label
 			] + ax.get_xticklabels() + ax.get_yticklabels():
 		item.set_fontsize(8)
-	fig.subplots_adjust(bottom=0.2, top=0.95, right=0.95)
+	# adjust manually because fig.tight_layout() is slow
+	fig.subplots_adjust(bottom=0.21, top=0.94, left=0.12, right=0.97)
 	result = b64fig(ax)
 	plt.close(fig)
 	return result
