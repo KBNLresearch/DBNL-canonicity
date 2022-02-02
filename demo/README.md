@@ -1,12 +1,14 @@
 # The Canonizer
 
+![Screenshot of The Canonizer](./canonizer.png)
+
 Installation:
 
 	$ git clone https://github.com/KBNLresearch/DBNL-canonicity.git
 	$ cd DBNL-canonicity/demo
 	$ wget https://github.com/KBNLresearch/DBNL-canonicity/releases/download/v1.0/data.zip
 	$ unzip data.zip
-    $ rm data.zip
+	$ rm data.zip
 
 Run:
 

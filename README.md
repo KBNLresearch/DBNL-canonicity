@@ -1,4 +1,4 @@
-# KB RiR project to Collect a corpus of Dutch novels 1800-2000 and Investigate Canonicity
+# Investigating Canonicity with A corpus of Dutch novels 1800-2000
 
 What determines canonicity? Is this purely subjective, or can we partly
 attribute it to textual features?
@@ -7,39 +7,26 @@ attribute it to textual features?
 
 ## project aims
 
-- Collect a corpus of Dutch novels 1800-2000
-- Investigate canonicity
-- Release a [dataset](https://doi.org/10.5281/zenodo.5786254) of textual features and metadata
-- Create an [online demo](https://kbresearch.nl/canonizer/)
-- World domination
+- [x] Collect a corpus of Dutch novels 1800-2000
+- [x] Investigate canonicity with distant reading
+- [x] Release an open access [dataset](https://lab.kb.nl/dataset/dutch-novels-1800-2000)
+      of textual features and metadata
+- [x] Create an [online demo](https://lab.kb.nl/tool/canonizer)
+- [ ] World domination
 
-## requirements
+This Researcher-in-Residence project ran from April to October 2021.
+The results are described in two blog posts:
 
-Tested on Linux. Windows with WSL probably works too.
+1. https://lab.kb.nl/about-us/blog/dataset-dutch-novels-1800-2000
+2. https://lab.kb.nl/about-us/blog/machine-learning-canonicity-dutch-novels-1800-2000
 
-	$ pip3 install -r requirements.txt
+## this repository
 
-The CLI version of zstd is required, see https://github.com/facebook/zstd
-or
+The code in this repository is mostly intended for documentation purposes.
+Re-building the dataset and fully reproducing all results requires
+data from a variety of sources; please get in touch if you are interested in this.
 
-	$ sudo apt install zstd
+### contributors
 
-Required external metadata is expected to be in `data/metadata`.
-Extra external data is expected to be in `data/metadata/streng`.
-Required data (TEI-files) is expected to be in `data/xml`.
-Temporary generated data is written to `data/generated`.
-Generated, reproducible output is written to `data/output/`, `fig/` and `tbl/`.
-
-## reproducing results (needs to be run at least once before `make test`)
-
-	$ make
-
-## running tests, coverage, lint
-
-	$ make test
-	$ make coverage
-	$ make lint
-
-Warnings are treated as errors. Install latest versions of all packages
-(including dependencies) to avoid them.
-See `htmlcov/index.html` for the test coverage report.
+- @andreasvc: https://andreasvc.github.io/
+- @Veldhoen: https://lab.kb.nl/person/sara-veldhoen
