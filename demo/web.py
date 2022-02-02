@@ -199,7 +199,7 @@ def freqplot(yearfreqs, feature, smoothing):
 	ax.set_xlabel('Year')
 	ax.set_ylabel('Frequency (%)')
 	# adjust manually because fig.tight_layout() is slow
-	fig.subplots_adjust(top=0.92, right=0.97, left=0.08)
+	fig.subplots_adjust(top=0.92, right=0.97)
 	lineplot = b64fig(ax)
 	plt.close(fig)
 	return lineplot
@@ -217,7 +217,7 @@ def makehistplot(features, intercept):
 	fig, ax = plt.subplots(figsize=(5, 2))
 	pos = features.loc[features['comb'] > 0, :]
 	neg = features.loc[features['comb'] < 0, :]
-	neg['comb'] += intercept / len(neg)  # account for intercept
+	negweights = (neg['comb'] + intercept) / len(neg)  # account for intercept
 	totalpos = features.loc[features['comb'] > 0, 'comb'].sum()
 	totalneg = features.loc[features['comb'] < 0, 'comb'].sum() + MODEL[1
 			].intercept_[0]
@@ -226,7 +226,7 @@ def makehistplot(features, intercept):
 	logbins = np.logspace(np.log10(bins[0]), np.log10(bins[-1]), len(bins))
 	ax.hist(pos['count'], bins=logbins, weights=pos['comb'],
 			histtype='stepfilled', label='pos: %+.3f' % totalpos)
-	ax.hist(neg['count'], bins=logbins, weights=neg['comb'],
+	ax.hist(neg['count'], bins=logbins, weights=negweights,
 			histtype='stepfilled', label='neg: %.3f' % totalneg)
 	ax.set_xscale('log')
 	ax.set_xlabel('Feature count')
@@ -239,7 +239,7 @@ def makehistplot(features, intercept):
 			] + ax.get_xticklabels() + ax.get_yticklabels():
 		item.set_fontsize(8)
 	# adjust manually because fig.tight_layout() is slow
-	fig.subplots_adjust(bottom=0.21, top=0.94, left=0.12, right=0.97)
+	fig.subplots_adjust(bottom=0.21, top=0.94, right=0.97)
 	result = b64fig(ax)
 	plt.close(fig)
 	return result
@@ -345,6 +345,7 @@ log.setLevel(logging.DEBUG)
 log.handlers[0].setFormatter(logging.Formatter(
 		fmt='%(asctime)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
 log.info('loading.')
+plt.set_loglevel('warn')
 if STANDALONE:
 	from getopt import gnu_getopt, GetoptError
 	try:
