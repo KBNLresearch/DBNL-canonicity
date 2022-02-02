@@ -10,10 +10,13 @@ RUN python -c "import nltk; nltk.download('punkt')"
 RUN groupadd -g 999 user && \
     useradd -r -u 999 -g user user
 
-RUN mkdir /usr/app && chown user:user /usr/app
+RUN mkdir --parents /usr/app/data /usr/app/templates && \
+    chown --recursive user:user /usr/app
 WORKDIR /usr/app
 
-COPY --chown=user:user . .
+COPY --chown=user:user data data/
+COPY --chown=user:user templates templates/
+COPY --chown=user:user web.py .
 
 USER 999
 ENV MPLCONFIGDIR=/tmp
